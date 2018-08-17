@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'/>
+    <title>The Simpsons</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.47.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.47.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <style>
+
+      #menumap {
+        position: absolute;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 6px;
+        width: 170px;
+        font-family: 'HelveticaNeue-Light';
+        color: #111;
+      }
+
+      #menu {
+        background: rgba(255, 255, 255, 0.8);
+        position: absolute;
+        z-index: 1;
+        top: 10px;
+        right: 10px;
+        width: 170px;
+        border: 0px solid rgba(0, 0, 0, 0.4);
+        border-radius: 5px;
+        font-family: 'HelveticaNeue-Light';
+      }
+
+      #menu > div {
+        font-size: 14px;
+        color: #333;
+        display: block;
+        margin: 0;
+        padding: 0;
+        padding: 10px;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        text-align: left;
+      }
+
+      #menu > div:last-child {
+        border: none;
+      }
+
+      #menu > div:hover {
+        background-color: #BFB5FF;
+        color: #404040;
+      }
+
+      .active {
+        background-color: #9F90F9;
+        color: rgba(255, 255, 255, 0.8);
+      }
+
+      .active:hover {
+        background-color: #9A8EF9;
+      }
+
+      .map-overlay {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.8);
+        margin-right: 20px;
+        font-family: 'HelveticaNeue-Light';
+        font-size: 10px;
+        overflow: auto;
+        border-radius: 3px;
+      }
+
+      #features {
+        top: 0;
+        height: 100px;
+        margin-top: 20px;
+        width: 250px;
+      }
+
+      #legend {
+        display: none;
+        padding: 10px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        line-height: 18px;
+        height: 85px;
+        margin-bottom: 40px;
+        width: 45px;
+      }
+
+      .legend-box {
+        display: inline-block;
+        position: relative;
+        border-radius: 20%;
+        width: 40px;
+        margin-right: 5px;
+      }
+
+      .legend-image {
+        display: block;
+        width: 20px;
+        height: 20px;
+        margin: auto;
+      }
+
+      .legend-text {
+        text-align: center;
+        font-size: 11px;
+      }
+
+      .legend-const {
+        background: rgba(255, 255, 255, 0.7);
+        position: fixed;
+        z-index: 1;
+        bottom: 35px;
+        left: 10px;
+        width: 180px;
+        height: 30px;
+        border: 0px solid rgba(0, 0, 0, 0.4);
+        border-radius: 2px;
+        font-family: 'HelveticaNeue-Light';
+        font-size: 12px;
+        padding: 4px;
+      }
+        .legend-const-gradient {
+        height: 10px;
+        width: 100%;
+        background: linear-gradient(to right, #ff575c, #f7a1b8,#f9e7ec);
+        font-family: 'HelveticaNeue-Light';
+        font-size: 12px;
+        margin-top: 4px;
+        }
+
+      #threeDButton {
+        background-color: rgba(255, 255, 255, 0.8);;
+        position: absolute;
+        z-index: 1;
+        top: 10px;
+        right: 190px;
+        width: 50px;
+        height: 35px;
+        border: 0px solid rgba(0, 0, 0, 0.4);
+        border-radius: 5px;
+        font-family: 'HelveticaNeue-Light';
+        color: #333;
+        display: block;
+        margin: 0;
+        padding: 0px;
+        text-decoration: none;
+        text-align: center;
+        font-size: 16px;
+        outline: none;
+      }
+
+      #threeDButton:hover {
+        background-color: #BFB5FF;
+        color: #404040;
+      }
+
+    </style>
+
+    <div id='map'></div>
+    <button id='threeDButton'>3D</button>
+    <div id='ledend' class="legend-const">
+      Happy Planet
+      <div id='legend-gradient'class="legend-const-gradient"></div>
+    </div>
+    <nav id="menu"></nav>
+    <script>
+
+// Позиционирование карты
+    mapboxgl.accessToken = 'pk.eyJ1IjoidGF5YWNoaWxsIiwiYSI6ImNpbGtxeHdnNzAwNzRvMGtxcWV4bXlmenQifQ.ymQiP_8v2syh79ZH9HU4Eg';
+    const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/tayachill/cjkmgxucw79sc2rpgindcpwyy',
+      zoom: 2,
+      minZoom: 2,
+      maxZoom: 4,
+    });
+
+// Загрузка из мапбокса слоев с данными и их стилями
+
+    map.on('load', function () {
+
+      map.addSource('HPI_data', {
+        type: 'geojson',
+        data: './data/HPI_2016_new.geojson'
+      });
+      map.addSource('HPI_centr', {
+        type: 'geojson',
+        data: './data/HPI_centroids.geojson'
+      });
+
+      map.addLayer({
+        "id": "HappyPlanetRank_extrud",
+        "type": "fill-extrusion",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1]
+        ],
+        "layout": {"visibility": "none"},
+        "paint": {
+          "fill-extrusion-height": [
+            "interpolate",
+            ["linear"],
+            ["get", "HPI_HPI Rank"],
+            1, 400000,
+            20, 150000,
+            140, 1000
+          ],
+          "fill-extrusion-color": [
+            "interpolate",
+            ["exponential", 1],
+            ["get", "HPI_HPI Rank"],
+            1, "#ff575c",
+            50, "hsl(344, 84%, 80%)",
+            140, "hsl(343, 59%, 94%)"
+          ]
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "Footprint_good",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          ["<=", "HPI_Footprint\n(gha\/capita)", 1.7]
+        ],
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "Footprint_good"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "Footprint_mid",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          [">", "HPI_Footprint\n(gha\/capita)", 1.7],
+          ["<=", "HPI_Footprint\n(gha\/capita)", 3.4]
+        ],
+        "layout": {"visibility": "none"},
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "Footprint__mid"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "Footprint_poor",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          [">", "HPI_Footprint\n(gha\/capita)", 3.4]
+        ],
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "Footprint__poor"
+        }
+      }, 'waterways');
+
+
+      map.addLayer({
+        "id": "LifeExpectancy_good",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          [">=", "HPI_Average Life \nExpectancy", 75]
+        ],
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "LifeExpectancy_good"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "LifeExpectancy_mid",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          [">=", "HPI_Average Life \nExpectancy", 65],
+          ["<", "HPI_Average Life \nExpectancy", 75]
+        ],
+        "layout": {"visibility": "none"},
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "LifeExpectancy_mid"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "LifeExpectancy_poor",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          ["<=", "HPI_Average Life \nExpectancy", 65],
+        ],
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "LifeExpectancy_poor"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "Wellbeing_good",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          [">", "HPI_Average Wellbeing\n(0-10)", 6]
+        ],
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "Wellbeing_good"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "Wellbeing_mid",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          ["<=", "HPI_Average Wellbeing\n(0-10)", 6],
+          [">=", "HPI_Average Wellbeing\n(0-10)", 5]
+        ],
+        "layout": {"visibility": "none"},
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "Wellbeing_mid"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "Wellbeing_poor",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          ["<", "HPI_Average Wellbeing\n(0-10)", 5],
+        ],
+        "layout": {
+          "visibility": "none"
+        },
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "Wellbeing_poor"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "outcomes_good",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          ["<=", "Inequality_ofOutcomes", 15],
+        ],
+        "layout": {"visibility": "none"},
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "outcomes_good"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "outcomes_mid",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          [">", "Inequality_ofOutcomes", 15],
+          ["<=", "Inequality_ofOutcomes", 30],
+        ],
+        "layout": {"visibility": "none"},
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "outcomes__mid"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "outcomes_poor",
+        "type": "fill",
+        "source": "HPI_data",
+        "minzoom": 0,
+        "filter": [
+          "all",
+          [">=", "HPI_HPI Rank", 1],
+          [">", "Inequality_ofOutcomes", 30],
+        ],
+        "layout": {"visibility": "none"},
+        "paint": {
+          "fill-outline-color": "hsla(0, 0%, 0%, 0)",
+          "fill-pattern": "outcomes_poor"
+        }
+      }, 'waterways');
+
+      map.addLayer({
+        "id": "donuts",
+        "type": "symbol",
+        "source": "HPI_centr",
+        "layout": {
+          "text-line-height": 1,
+          "text-size": [
+            "interpolate",
+            ["exponential", 1.25],
+            ["zoom"],
+            1, 12,
+            5, 20
+          ],
+          "icon-offset": [0, 0],
+          "icon-image": [
+            "case",
+            [">=", ["number", ["get", "HPI_Happ_1"]], 32.7],
+            "Simpsons_Donut_purple",
+            ["<=", ["number", ["get", "HPI_Happ_1"]], 28.6],
+            "Simpsons_Donut",
+            "Simpsons_Donut_red"
+          ],
+          "text-font": ["Homer Simpson Revised Regular"],
+          "icon-allow-overlap": true,
+          "visibility": "none",
+          "text-offset": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0,
+            ["interpolate",
+              ["linear"], ["get", "HPI_Happ_1"],
+              12.8, ["literal", [0, 0.3]],
+              44.7, ["literal", [0, 2.5]]
+            ],
+            5,
+            ["interpolate",
+              ["linear"], ["get", "HPI_Happ_1"],
+              12.8, ["literal", [0, 0.6]],
+              44.7, ["literal", [0, 2]]
+            ]
+          ],
+          "icon-size": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0,
+            ["interpolate",
+              ["linear"], ["get", "HPI_Happ_1"],
+              12.8, 0.05,
+              44.2, 0.5
+            ],
+            5,
+            ["interpolate",
+              ["linear"], ["get", "HPI_Happ_1"],
+              12.8, 0.1,
+              44.2, 0.8
+            ]
+          ],
+          "text-anchor": "top",
+          "text-field": [
+            "to-string",
+            ["get", "ADMIN"]
+          ],
+          "text-letter-spacing": 0.2,
+          "icon-padding": 1,
+          "text-max-width": [
+            "interpolate",
+            ["exponential", 1],
+            ["zoom"],
+            0, 5,
+            3, 6
+          ]
+        },
+        "paint": {
+          "icon-opacity": 1,
+          "text-color": "hsl(177, 0%, 100%)",
+          "text-halo-color": "hsla(0, 0%, 0%, 0.4)",
+          "text-halo-width": 2
+        }
+      }, 'waterways');
+
+
+
+      toggleLayer('3', ['Wellbeing_poor', 'Wellbeing_mid', 'Wellbeing_good'], 'Wellbeing');
+      toggleLayer('4', ['Footprint_poor', 'Footprint_mid', 'Footprint_good'], 'Ecological Footprint');
+      toggleLayer('5', ['LifeExpectancy_poor', 'LifeExpectancy_mid', 'LifeExpectancy_good'], 'Life Expectancy');
+      toggleLayer('6', ['outcomes_poor', 'outcomes_mid', 'outcomes_good'], 'Inequality of Outcomes');
+      toggleLayer('1', ['donuts'], 'Happy Planet Index');
+
+      var threeDButton = document.getElementById('threeDButton');
+      threeDButton.onclick = function() {
+          var visibility = map.getLayoutProperty('HappyPlanetRank_extrud', 'visibility');
+          if (visibility === 'visible') {
+            map.setLayoutProperty('HappyPlanetRank_extrud', 'visibility', 'none');
+            threeDButton.style.backgroundColor = '';
+          } else {
+            threeDButton.style.backgroundColor = '#9F90F9';
+            map.setLayoutProperty('HappyPlanetRank_extrud', 'visibility', 'visible');
+          }
+      };
+
+      function toggleLayer(id, ids, name) {
+        var button = document.createElement('div');
+        button.textContent = name;
+
+        const legendIds = ['1', '2', '3'];
+        const labels = ['good', 'mid', 'poor']
+
+        console.log(id);
+        var legend = document.createElement('div');
+        legend.id = id;
+        legend.style.display = 'none';
+        legend.style.textAlign = 'center';
+        legend.style.marginTop = '5px';
+        // Легенда
+        ['1', '2', '3'].forEach(function (legendId, i) {
+          var legendBox = document.createElement('span');
+          var legendImage = document.createElement('div');
+          var legendText = document.createElement('div');
+          legendBox.className = 'legend-box';
+          legendImage.className = 'legend-image';
+          legendText.className = 'legend-text';
+          legendImage.style.backgroundImage = `url(./icons/${id}.${legendId}.svg)`;
+          legendImage.style.backgroundSize = 'cover';
+          legendText.innerHTML = labels[i];
+          legend.appendChild(legendBox);
+          legendBox.appendChild(legendImage);
+          legendBox.appendChild(legendText);
+        })
+
+        button.appendChild(legend);
+
+        // Событие onClick
+        button.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          if (legend.style.display === 'block') {
+            legend.style.display = 'none';
+          } else {
+            legend.style.display = 'block';
+          }
+
+          for (layers in ids) {
+            var visibility = map.getLayoutProperty(ids[layers], 'visibility');
+            if (visibility === 'visible') {
+              map.setLayoutProperty(ids[layers], 'visibility', 'none');
+              this.className = '';
+              if (ids[layers] === 'donuts') {
+                map.setLayoutProperty('country-large', 'visibility', 'visible');
+                map.setLayoutProperty('country-medium', 'visibility', 'visible');
+                map.setLayoutProperty('country-small', 'visibility', 'visible');
+              }
+            } else {
+              this.className = 'active';
+              map.setLayoutProperty(ids[layers], 'visibility', 'visible');
+              if (ids[layers] === 'donuts') {
+                map.setLayoutProperty('country-large', 'visibility', 'none');
+                map.setLayoutProperty('country-medium', 'visibility', 'none');
+                map.setLayoutProperty('country-small', 'visibility', 'none');
+              }
+            }
+          }
+        };
+        var layers = document.getElementById('menu');
+        layers.appendChild(button);
+      }
+    });
+
+    </script>
+  </body>
+</html>
